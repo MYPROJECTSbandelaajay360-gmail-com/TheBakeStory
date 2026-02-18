@@ -189,7 +189,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://3.89.185.55:3000",
+    "http://54.227.178.218:3000",
     "http://thebakestory.store",
     "https://thebakestory.store",
 ]
