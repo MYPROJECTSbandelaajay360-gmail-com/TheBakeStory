@@ -2,7 +2,7 @@
 # ============================================================
 # The Bake Story - EC2 Deployment Script
 # EC2 IP: 54.162.20.141
-# Domain: thebakestory.shop
+# Domain: thebakestory.store
 # Run as: ubuntu user on EC2
 # ============================================================
 
@@ -27,9 +27,7 @@ if [ -d "$APP_DIR/.git" ]; then
     git pull origin main
 else
     echo "  → Cloning repository..."
-    # Replace the URL below with your actual Git repo URL
-    # git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git "$APP_DIR"
-    echo "  ⚠  Skipping clone — copy project files manually or set git URL above."
+    git clone https://github.com/MYPROJECTSbandelaajay360-gmail-com/TheBakeStory.git "$APP_DIR"
 fi
 
 cd "$APP_DIR"

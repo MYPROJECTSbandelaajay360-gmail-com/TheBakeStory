@@ -16,7 +16,7 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.environ.get(
     'ALLOWED_HOSTS',
-    '54.162.20.141,thebakestory.shop,www.thebakestory.shop,localhost,127.0.0.1'
+    '54.162.20.141,thebakestory.store,www.thebakestory.store,localhost,127.0.0.1'
 ).split(',')
 
 # Security settings for production
@@ -153,10 +153,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
     "http://54.162.20.141",
-    "http://thebakestory.shop",
-    "https://thebakestory.shop",
-    "http://www.thebakestory.shop",
-    "https://www.thebakestory.shop",
+    "http://thebakestory.store",
+    "https://thebakestory.store",
+    "http://www.thebakestory.store",
+    "https://www.thebakestory.store",
 ]
 
 CORS_ALLOW_HEADERS = [
@@ -174,10 +174,10 @@ CORS_ALLOW_HEADERS = [
 # CSRF trusted origins for production
 CSRF_TRUSTED_ORIGINS = [
     "http://54.162.20.141",
-    "http://thebakestory.shop",
-    "https://thebakestory.shop",
-    "http://www.thebakestory.shop",
-    "https://www.thebakestory.shop",
+    "http://thebakestory.store",
+    "https://thebakestory.store",
+    "http://www.thebakestory.store",
+    "https://www.thebakestory.store",
 ]
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
