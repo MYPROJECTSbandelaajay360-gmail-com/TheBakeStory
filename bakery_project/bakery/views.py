@@ -366,6 +366,108 @@ def logout_view(request):
     return redirect('index')
 
 
+def forgot_password_view(request):
+    """Show forgot password form and send reset email"""
+    if request.user.is_authenticated:
+        return redirect('index')
+
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            messages.error(request, 'No account found with that email address.')
+            return render(request, 'bakery/forgot_password.html')
+
+        # Generate secure token
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+
+        # Build reset link
+        reset_url = request.build_absolute_uri(
+            f'/reset-password/{uid}/{token}/'
+        )
+
+        # Send reset email
+        user_name = user.get_full_name() or user.email.split('@')[0]
+        html_message = f"""
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #fffaf5; border-radius: 16px; overflow: hidden; border: 1px solid #f0e0cc;">
+            <div style="background: linear-gradient(135deg, #d2691e 0%, #b8571e 100%); padding: 30px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">🍰 The Bake Story</h1>
+                <p style="color: rgba(255,255,255,0.9); margin-top: 5px; font-size: 14px;">Password Reset Request</p>
+            </div>
+            <div style="padding: 30px;">
+                <p style="color: #333; font-size: 16px;">Hi <strong>{user_name}</strong>,</p>
+                <p style="color: #555; font-size: 15px; line-height: 1.6;">We received a request to reset your password. Click the button below to set a new password:</p>
+                <div style="text-align: center; margin: 25px 0;">
+                    <a href="{reset_url}" style="background: linear-gradient(135deg, #d2691e 0%, #b8571e 100%); color: white; padding: 14px 40px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 16px; display: inline-block;">Reset Password</a>
+                </div>
+                <p style="color: #888; font-size: 13px; line-height: 1.5;">If you didn't request this, you can safely ignore this email. This link will expire automatically.</p>
+                <hr style="border: none; border-top: 1px solid #f0e0cc; margin: 20px 0;">
+                <p style="color: #aaa; font-size: 12px; text-align: center;">The Bake Story &bull; Chaitanyapuri, Dilsukhnagar, Hyderabad</p>
+            </div>
+        </div>
+        """
+        try:
+            from django.core.mail import send_mail
+            send_mail(
+                subject='Reset Your Password - The Bake Story',
+                message=f'Hi {user_name}, reset your password here: {reset_url}',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            messages.success(request, 'A password reset link has been sent to your email!')
+        except Exception as e:
+            print(f"❌ Email send failed: {e}")
+            messages.error(request, 'Failed to send reset email. Please try again later.')
+
+        return render(request, 'bakery/forgot_password.html')
+
+    return render(request, 'bakery/forgot_password.html')
+
+
+def reset_password_view(request, uidb64, token):
+    """Validate token and allow user to set new password"""
+    from django.contrib.auth.tokens import default_token_generator
+    from django.utils.http import urlsafe_base64_decode
+
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is None or not default_token_generator.check_token(user, token):
+        messages.error(request, 'This password reset link is invalid or has expired.')
+        return redirect('forgot_password')
+
+    if request.method == 'POST':
+        password = request.POST.get('password', '')
+        confirm_password = request.POST.get('confirm_password', '')
+
+        if len(password) < 6:
+            messages.error(request, 'Password must be at least 6 characters long.')
+            return render(request, 'bakery/reset_password.html', {'valid_link': True})
+
+        if password != confirm_password:
+            messages.error(request, 'Passwords do not match.')
+            return render(request, 'bakery/reset_password.html', {'valid_link': True})
+
+        # set_password handles PBKDF2 hashing + salting automatically
+        user.set_password(password)
+        user.save()
+        messages.success(request, 'Your password has been reset successfully! Please login with your new password.')
+        return redirect('login')
+
+    return render(request, 'bakery/reset_password.html', {'valid_link': True})
+
+
 # Razorpay Integration - Initialize client
 razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 

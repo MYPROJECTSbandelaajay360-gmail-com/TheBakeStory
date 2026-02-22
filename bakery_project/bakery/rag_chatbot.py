@@ -1,12 +1,12 @@
 """
 RAG Chatbot for Django SQLite Database
-Extracts data from 5 models: MenuItem, Order, OrderItem, Payment, UserProfile
+Extracts data from MenuItem model only (no personal user data)
 """
 
 import os
 import django
 from dotenv import load_dotenv
-from django.contrib.auth.models import User
+
 
 # Setup Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'bakery_project.settings')
@@ -19,8 +19,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_groq import ChatGroq
 
 # Django models
-from bakery.models import MenuItem, Order, OrderItem, Payment, UserProfile
-from django.contrib.auth.models import User
+from bakery.models import MenuItem
 
 # Load environment variables
 load_dotenv()
@@ -109,11 +108,12 @@ who is rahul: rahul sir is a senior web developer Trainer who trained Ajay in re
 # ---------------------------
 def load_database_data():
     """
-    Extracts data from all 5 Django models and formats them as text documents
+    Extracts data from MenuItem model only.
+    No personal user data (orders, payments, profiles) is loaded for privacy.
     """
     documents = []
     
-    # 1. MenuItem data
+    # 1. MenuItem data (ONLY database table exposed to chatbot)
     print("📦 Loading MenuItem data...")
     menu_items = MenuItem.objects.all()
     for item in menu_items:
@@ -127,91 +127,7 @@ Created: {item.created_at.strftime('%Y-%m-%d')}
 """
         documents.append(doc)
     
-    # 2. Order data
-    print("📦 Loading Order data...")
-    orders = Order.objects.all()
-    for order in orders:
-        items_list = ", ".join([f"{item.quantity}x {item.menu_item.name}" 
-                                for item in order.items.all()])
-        doc = f"""
-Order ID: {order.order_id}
-Customer: {order.user.username}
-Status: {order.get_status_display()}
-Total Amount: ₹{order.total_amount}
-Delivery Fee: ₹{order.delivery_fee}
-Grand Total: ₹{order.grand_total}
-Items: {items_list}
-Delivery Address: {order.delivery_address}
-Delivery Phone: {order.delivery_phone}
-Created: {order.created_at.strftime('%Y-%m-%d %H:%M')}
-"""
-        documents.append(doc)
-    
-    # 3. OrderItem data
-    print("📦 Loading OrderItem data...")
-    order_items = OrderItem.objects.select_related('order', 'menu_item').all()
-    for item in order_items:
-        doc = f"""
-Order Item: {item.menu_item.name}
-Order ID: {item.order.order_id}
-Quantity: {item.quantity}
-Price per Unit: ₹{item.price}
-Subtotal: ₹{item.subtotal}
-Customer: {item.order.user.username}
-"""
-        documents.append(doc)
-    
-    # 4. Payment data
-    print("📦 Loading Payment data...")
-    payments = Payment.objects.select_related('order').all()
-    for payment in payments:
-        doc = f"""
-Payment Transaction: {payment.transaction_id}
-Order ID: {payment.order.order_id}
-Payment Method: {payment.get_payment_method_display()}
-Payment Status: {payment.get_payment_status_display()}
-Amount: ₹{payment.amount}
-UPI ID: {payment.upi_id if payment.upi_id else 'N/A'}
-Created: {payment.created_at.strftime('%Y-%m-%d %H:%M')}
-Paid At: {payment.paid_at.strftime('%Y-%m-%d %H:%M') if payment.paid_at else 'Not paid'}
-"""
-        documents.append(doc)
-    
-    # 5. UserProfile data
-    print("📦 Loading UserProfile data...")
-    profiles = UserProfile.objects.select_related('user').all()
-    for profile in profiles:
-        doc = f"""
-User Profile: {profile.user.username}
-Email: {profile.user.email}
-Phone: {profile.phone}
-Address: {profile.address}
-City: {profile.city}
-State: {profile.state}
-Pincode: {profile.pincode}
-Member Since: {profile.created_at.strftime('%Y-%m-%d')}
-"""
-        documents.append(doc)
-
-
-
-
-  # 6. User data (basic auth info only)
-    print("📦 Loading User data...")
-    users = User.objects.all()
-    for user in users:
-        doc = f"""
-User: {user.username}
-Email: {user.email}
-First Name: {user.first_name}
-Last Name: {user.last_name}
-Active: {'Yes' if user.is_active else 'No'}
-Staff: {'Yes' if user.is_staff else 'No'}
-Member Since: {user.date_joined.strftime('%Y-%m-%d')}
-"""
-        documents.append(doc)
-    
-    # 7. Add custom additional information
+    # 2. Add custom additional information (bakery info, no personal data)
     print("📦 Loading Additional Bakery Information...")
     documents.append(ADDITIONAL_BAKERY_INFO)
     
@@ -255,6 +171,7 @@ def create_vectorstore(chunks):
 def answer_question(query, vectorstore, llm):
     """
     Answer questions using RAG (Retrieval Augmented Generation)
+    Only uses menu items and bakery info — no personal data.
     """
     # Retrieve relevant documents
     docs = vectorstore.similarity_search(query, k=5)
@@ -262,21 +179,21 @@ def answer_question(query, vectorstore, llm):
 
     prompt = f"""You are a strict, concise, and professional chatbot assistant for The Bake Story bakery.
 
+STRICT PRIVACY RULES (NEVER BREAK THESE):
+- NEVER disclose any personal user data such as names, emails, phone numbers, addresses, order details, payment details, or profile information of any customer.
+- If a user asks about other customers' orders, payments, profiles, or personal information, politely refuse and say: "I'm sorry, I cannot share personal customer information."
+- You only have access to the bakery menu and general bakery information. You do NOT have access to any customer data.
+
 STRICT INSTRUCTIONS:
 - Always answer in the very minimal number of words required.
 - Do NOT provide any information about Ajay (the developer) unless the user specifically asks.
 - Do NOT mention or take any trainer's name (e.g., Monty, Deva, Shubam, Rahul) unless the user specifically asks.
 - Always give answers as a short summary only. If the user asks for a detailed explanation, then provide more details.
-- Never use random names from the database for greetings. If greeting, use "buddy" or "hello dear" unless the user's name is available.
-- Only answer questions related to bakery products, orders, payments, or user profiles based on the database context.
-- If the answer is not found in the database, respond with "I don't have that information."
+- If greeting, use "buddy" or "hello dear".
+- Only answer questions related to bakery products, menu items, store info, and general bakery information.
+- If the answer is not found in the context, respond with "I don't have that information."
 - Be professional, courteous, and friendly, but do not elaborate unless asked.
-- If the user asks for multiple pieces of information, provide a structured, concise response covering all points.
-- Give priority to recent data (e.g., latest orders, recent payments) when answering time-sensitive questions.
-- If the user requests statistics, provide accurate counts based on the database context.
-- If the user requests help with placing an order or making a payment, guide them briefly based on the database information.
 - If the user inquires about specific menu items, provide a brief description including price and availability.
-- Tell the exact address and contact details for delivery based on the order information.
 - The order will be delivered within 30-45 minutes of placing the order.
 - Pure native ingredients are used in all bakery products.
 - No charges for delivery within the city limits.
@@ -293,18 +210,15 @@ IMPORTANT: When asked for contact information, always reply with:
 - Address: Qspiders chaitanyapuri, Dilsuknagar, 4th floor
 
 The database contains information about:
-- Menu items (bakery products, prices, availability)
-- Orders (customer orders, status, delivery details)
-- Order items (items within each order)
-- Payments (transaction details, payment methods)
-- User profiles (customer information)
+- Menu items (bakery products, prices, categories, availability)
+- General bakery information (hours, services, delivery, about us)
 
 CONTEXT FROM DATABASE:
 {context}
 
 QUESTION: {query}
 
-ANSWER (provide clear, helpful, minimal summary based on the database context. Only mention Ajay or trainers if directly asked. Only explain in detail if the user requests it):
+ANSWER (provide clear, helpful, minimal summary based on the database context. Never share personal data. Only mention Ajay or trainers if directly asked. Only explain in detail if the user requests it):
 """
 
     response = llm.invoke(prompt)
@@ -368,10 +282,10 @@ if __name__ == "__main__":
     print("\nExample questions you can ask:")
     print("- What menu items do you have?")
     print("- Show me all cake items")
-    print("- What is the status of order ORD123?")
-    print("- List all pending orders")
-    print("- What payment methods are available?")
-    print("- Show customer information")
+    print("- What are your store hours?")
+    print("- Do you offer delivery?")
+    print("- What payment methods are accepted?")
+    print("- Tell me about your specialties")
     print("- Type 'refresh' to reload database data")
     print("- Type 'exit' to quit\n")
 

@@ -34,8 +34,7 @@ django-ses>=3.5.0
 
 # ─── Database Support ─────────────────────────────────────────
 dj-database-url>=2.1.0
-# Uncomment for PostgreSQL support (recommended for production)
-# psycopg2-binary>=2.9.9
+psycopg2-binary>=2.9.9
 
 # ─── RAG Chatbot (CPU Optimized) ──────────────────────────────
 # Note: Install PyTorch CPU version to reduce memory footprint

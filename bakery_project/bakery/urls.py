@@ -19,6 +19,8 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('signup/', views.signup_view, name='signup'),
     path('logout/', views.logout_view, name='logout'),
+    path('forgot-password/', views.forgot_password_view, name='forgot_password'),
+    path('reset-password/<uidb64>/<token>/', views.reset_password_view, name='reset_password'),
     path('bot/', views.chatbot_view, name='chatbot'),  # Old chatbot page
     
     # New Premium Café URLs

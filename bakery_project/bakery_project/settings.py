@@ -89,27 +89,20 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'bakery_project.wsgi.application'
 
-# Database — SQLite for development, can be configured for PostgreSQL in production
-DATABASE_URL = os.environ.get('DATABASE_URL', '')
+# Database — PostgreSQL via Neon (DATABASE_URL required)
+import dj_database_url
 
-if DATABASE_URL:
-    # Use PostgreSQL or other database if DATABASE_URL is provided
-    import dj_database_url
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-    }
-else:
-    # Default to SQLite
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is required. Set it in your .env file.")
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -162,8 +155,13 @@ BAKERY_NAME = 'The Bake Story'
 SMS_NOTIFICATIONS_ENABLED = False
 
 # ─── Email Configuration ──────────────────────────────────────────────────────
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST_USER = os.environ.get('ADMIN_EMAIL', 'btechmuthyam@gmail.com')
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('SMTP_PORT', 587))
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('SMTP_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('SMTP_PASS', '')
+DEFAULT_FROM_EMAIL = os.environ.get('SMTP_USER', 'bandelaajay362@gmail.com')
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'btechmuthyam@gmail.com')
 EMAIL_NOTIFICATIONS_ENABLED = False
 

@@ -16,8 +16,8 @@ from decimal import Decimal
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Import chatbot and models
-from .rag_chatbot import DatabaseRAGChatbot
+# DatabaseRAGChatbot is imported lazily inside get_chatbot() to avoid
+# loading heavy ML libs (langchain, FAISS, HuggingFace) at server startup
 from .models import MenuItem, Order, OrderItem, Payment
 from django.db import models
 
@@ -44,11 +44,12 @@ order_sessions = {}
 
 
 def get_chatbot():
-    """Get or create chatbot instance"""
+    """Get or create chatbot instance (lazy imports heavy ML libs)"""
     global chatbot_instance
     try:
         if chatbot_instance is None:
             print("🤖 Creating new chatbot instance...")
+            from .rag_chatbot import DatabaseRAGChatbot  # Lazy import
             chatbot_instance = DatabaseRAGChatbot(GROQ_API_KEY)
             chatbot_instance.initialize()
         elif chatbot_instance.vectorstore is None:
